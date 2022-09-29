@@ -80,8 +80,12 @@ Model modelDartLegoRightLeg;
 // Model animate instance
 // Mayow
 Model mayowModelAnimate;
+
+//skeleton
+Model skeletonModelAnimate;
+
 // Terrain model instance
-Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap.png");
+Terrain terrain(-1, -1, 200, 20, "../Textures/heightmapCustom2.png");
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint skyboxTextureID;
@@ -112,6 +116,7 @@ glm::mat4 modelMatrixLambo = glm::mat4(1.0);
 glm::mat4 modelMatrixAircraft = glm::mat4(1.0);
 glm::mat4 modelMatrixDart = glm::mat4(1.0f);
 glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
+glm::mat4 modelMatrixSkeleton = glm::mat4(1.0f);
 
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 int modelSelected = 0;
@@ -273,6 +278,10 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	//Mayow
 	mayowModelAnimate.loadModel("../models/mayow/personaje2.fbx");
 	mayowModelAnimate.setShader(&shaderMulLighting);
+
+	//skeleton
+	skeletonModelAnimate.loadModel("../models/own/skeletonAnim.fbx");
+	skeletonModelAnimate.setShader(&shaderMulLighting);
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 
@@ -507,6 +516,7 @@ void destroy() {
 
 	// Custom objects animate
 	mayowModelAnimate.destroy();
+	skeletonModelAnimate.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -584,7 +594,7 @@ bool processInput(bool continueApplication) {
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
 		enableCountSelected = false;
 		modelSelected++;
-		if(modelSelected > 2)
+		if(modelSelected > 3)
 			modelSelected = 0;
 		if(modelSelected == 1)
 			fileName = "../animaciones/animation_dart_joints.txt";
@@ -670,6 +680,37 @@ bool processInput(bool continueApplication) {
 	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(0.02, 0.0, 0.0));
 
+	if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		modelMatrixMayow = glm::rotate(modelMatrixMayow, 0.02f, glm::vec3(0, 1, 0));
+	else if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		modelMatrixMayow = glm::rotate(modelMatrixMayow, -0.02f, glm::vec3(0, 1, 0));
+	if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0f, 0.0f, 0.02f));
+	else if (modelSelected == 0 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0.0f, 0.0f, -0.02f));
+
+	//movimiento de esqueleto
+	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::rotate(modelMatrixSkeleton, 0.02f, glm::vec3(0, 1, 0));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::rotate(modelMatrixSkeleton, -0.02f, glm::vec3(0, 1, 0));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::translate(modelMatrixSkeleton, glm::vec3(0.0f, 0.0f, 0.02f));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::translate(modelMatrixSkeleton, glm::vec3(0.0f, 0.0f, -0.02f));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+
 	glfwPollEvents();
 	return continueApplication;
 }
@@ -689,6 +730,9 @@ void applicationLoop() {
 
 	modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(13.0f, 0.05f, -5.0f));
 	modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+
+	modelMatrixSkeleton = glm::translate(modelMatrixSkeleton, glm::vec3(13.0f, 0.05f, 0.0f));
+	modelMatrixSkeleton = glm::rotate(modelMatrixSkeleton, glm::radians(-90.0f), glm::vec3(0, 1, 0));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -761,7 +805,8 @@ void applicationLoop() {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, textureCespedID);
 		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(80, 80)));
-		terrain.setPosition(glm::vec3(100, 0, 100));
+		terrain.setPosition(glm::vec3(100, 0, 100)); //mitad del tamano del terreno
+		//terrain.enableWireMode();
 		terrain.render();
 		shaderMulLighting.setVectorFloat2("scaleUV", glm::value_ptr(glm::vec2(0, 0)));
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -865,10 +910,46 @@ void applicationLoop() {
 		 * Custom Anim objects obj
 		 *******************************************/
 		modelMatrixMayow[3][1] = terrain.getHeightTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]);
+		//obtiene normal del terreno
+		glm::vec3 ejeyMay = glm::normalize( terrain.getNormalTerrain(modelMatrixMayow[3][0], modelMatrixMayow[3][2]) );
+		//ortogonalizando
+		glm::vec3 ejexMay = glm::normalize(glm::vec3(modelMatrixMayow[0])); //se fija el vector
+		glm::vec3 ejezMay = glm::normalize(glm::cross(ejexMay, ejeyMay)); //producto cruz para hacer z perpendicular
+		ejexMay = glm::normalize(glm::cross(ejeyMay, ejezMay)); //producto cruz para hacer x perpendicular
+
+		modelMatrixMayow[0] = glm::vec4(ejexMay, 0.0f); //nuevos ejes
+		modelMatrixMayow[1] = glm::vec4(ejeyMay, 0.0f);
+		modelMatrixMayow[2] = glm::vec4(ejezMay, 0.0f);
+
 		glm::mat4 modelMatrixMayowBody = glm::mat4(modelMatrixMayow);
 		modelMatrixMayowBody = glm::scale(modelMatrixMayowBody, glm::vec3(0.021, 0.021, 0.021));
 		mayowModelAnimate.setAnimationIndex(0);
 		mayowModelAnimate.render(modelMatrixMayowBody);
+
+		//Esqueleto
+		modelMatrixSkeleton[3][1] = terrain.getHeightTerrain(modelMatrixSkeleton[3][0], 
+				modelMatrixSkeleton[3][2]);
+		//obtiene normal del terreno
+		glm::vec3 ejeySkel = glm::normalize(terrain.getNormalTerrain(modelMatrixSkeleton[3][0], 
+				modelMatrixSkeleton[3][2]));
+		//ortogonalizando
+		glm::vec3 ejexSkel = glm::normalize(glm::vec3(modelMatrixSkeleton[0]
+											)); //se fija el vector
+		glm::vec3 ejezSkel = glm::normalize(glm::cross(ejexSkel, 
+				ejeySkel)); //producto cruz para hacer z perpendicular
+		ejexSkel = glm::normalize(glm::cross(ejeySkel, 
+				ejezSkel)); //producto cruz para hacer x perpendicular
+
+		modelMatrixSkeleton[0] = glm::vec4(ejexSkel, 0.0f); //nuevos ejes
+		modelMatrixSkeleton[1] = glm::vec4(ejeySkel, 0.0f);
+		modelMatrixSkeleton[2] = glm::vec4(ejezSkel, 0.0f);
+
+		glm::mat4 modelMatrixSkeletonBody = glm::mat4(modelMatrixSkeleton);
+		modelMatrixSkeletonBody = glm::scale(modelMatrixSkeletonBody, 
+				glm::vec3(0.021, 0.021, 0.021));
+		//skeletonModelAnimate.setAnimationIndex(0);
+		skeletonModelAnimate.render(modelMatrixSkeletonBody);
+		skeletonModelAnimate.setAnimationIndex(0);
 
 		/*******************************************
 		 * Skybox
