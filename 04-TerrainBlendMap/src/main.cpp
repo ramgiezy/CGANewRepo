@@ -82,8 +82,12 @@ Model modelDartLegoRightLeg;
 // Model animate instance
 // Mayow
 Model mayowModelAnimate;
+
+//skeleton
+Model skeletonModelAnimate;
+
 // Terrain model instance
-Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap.png");
+Terrain terrain(-1, -1, 200, 15, "../Textures/heightMapP4.png");
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint textureTerrainBackgroundID, textureTerrainRID, textureTerrainGID, textureTerrainBID, textureTerrainBlendMapID;
@@ -115,6 +119,7 @@ glm::mat4 modelMatrixLambo = glm::mat4(1.0);
 glm::mat4 modelMatrixAircraft = glm::mat4(1.0);
 glm::mat4 modelMatrixDart = glm::mat4(1.0f);
 glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
+glm::mat4 modelMatrixSkeleton = glm::mat4(1.0f);
 
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 int modelSelected = 0;
@@ -278,6 +283,10 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	//Mayow
 	mayowModelAnimate.loadModel("../models/mayow/personaje2.fbx");
 	mayowModelAnimate.setShader(&shaderMulLighting);
+
+	//skeleton
+	skeletonModelAnimate.loadModel("../models/own/skeletonAnim.fbx");
+	skeletonModelAnimate.setShader(&shaderMulLighting);
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 
@@ -471,7 +480,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureLandingPad.freeImage(bitmap);
 
 	// Definiendo la textura a utilizar
-	Texture textureTerrainBackground("../Textures/grassy2.png");
+	Texture textureTerrainBackground("../Textures/sand.jpg");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	bitmap = textureTerrainBackground.loadImage();
 	// Convertimos el mapa de bits en un arreglo unidimensional de tipo unsigned char
@@ -503,7 +512,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureTerrainBackground.freeImage(bitmap);
 
 	// Definiendo la textura a utilizar
-	Texture textureTerrainR("../Textures/mud.png");
+	Texture textureTerrainR("../Textures/succulentSand.png");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	bitmap = textureTerrainR.loadImage();
 	// Convertimos el mapa de bits en un arreglo unidimensional de tipo unsigned char
@@ -535,7 +544,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureTerrainR.freeImage(bitmap);
 
 	// Definiendo la textura a utilizar
-	Texture textureTerrainG("../Textures/grassFlowers.png");
+	Texture textureTerrainG("../Textures/sandGrass.jpg");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	bitmap = textureTerrainG.loadImage();
 	// Convertimos el mapa de bits en un arreglo unidimensional de tipo unsigned char
@@ -567,7 +576,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureTerrainG.freeImage(bitmap);
 
 	// Definiendo la textura a utilizar
-	Texture textureTerrainB("../Textures/path.png");
+	Texture textureTerrainB("../Textures/water.jpg");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	bitmap = textureTerrainB.loadImage();
 	// Convertimos el mapa de bits en un arreglo unidimensional de tipo unsigned char
@@ -599,7 +608,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	textureTerrainB.freeImage(bitmap);
 
 	// Definiendo la textura a utilizar
-	Texture textureTerrainBlendMap("../Textures/blendMapCustom1.png");
+	Texture textureTerrainBlendMap("../Textures/blendMapCustom2.png");
 	// Carga el mapa de bits (FIBITMAP es el tipo de dato de la libreria)
 	bitmap = textureTerrainBlendMap.loadImage(true);
 	// Convertimos el mapa de bits en un arreglo unidimensional de tipo unsigned char
@@ -673,6 +682,7 @@ void destroy() {
 
 	// Custom objects animate
 	mayowModelAnimate.destroy();
+	skeletonModelAnimate.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -755,7 +765,7 @@ bool processInput(bool continueApplication) {
 	if (enableCountSelected && glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS){
 		enableCountSelected = false;
 		modelSelected++;
-		if(modelSelected > 2)
+		if(modelSelected > 3)
 			modelSelected = 0;
 		if(modelSelected == 1)
 			fileName = "../animaciones/animation_dart_joints.txt";
@@ -840,6 +850,28 @@ bool processInput(bool continueApplication) {
 		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(-0.02, 0.0, 0.0));
 	else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(0.02, 0.0, 0.0));
+
+	//movimiento de esqueleto
+	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::rotate(modelMatrixSkeleton, 0.02f, glm::vec3(0, 1, 0));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::rotate(modelMatrixSkeleton, -0.02f, glm::vec3(0, 1, 0));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::translate(modelMatrixSkeleton, glm::vec3(0.0f, 0.0f, 0.02f));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
+	else if (modelSelected == 3 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	{
+		modelMatrixSkeleton = glm::translate(modelMatrixSkeleton, glm::vec3(0.0f, 0.0f, -0.02f));
+		skeletonModelAnimate.setAnimationIndex(1);
+	}
 
 	glfwPollEvents();
 	return continueApplication;
@@ -1073,6 +1105,31 @@ void applicationLoop() {
 		modelMatrixMayowBody = glm::scale(modelMatrixMayowBody, glm::vec3(0.021, 0.021, 0.021));
 		mayowModelAnimate.setAnimationIndex(0);
 		mayowModelAnimate.render(modelMatrixMayowBody);
+
+		//Esqueleto
+		modelMatrixSkeleton[3][1] = terrain.getHeightTerrain(modelMatrixSkeleton[3][0],
+			modelMatrixSkeleton[3][2]);
+		//obtiene normal del terreno
+		glm::vec3 ejeySkel = glm::normalize(terrain.getNormalTerrain(modelMatrixSkeleton[3][0],
+			modelMatrixSkeleton[3][2]));
+		//ortogonalizando
+		glm::vec3 ejexSkel = glm::normalize(glm::vec3(modelMatrixSkeleton[0]
+		)); //se fija el vector
+		glm::vec3 ejezSkel = glm::normalize(glm::cross(ejexSkel,
+			ejeySkel)); //producto cruz para hacer z perpendicular
+		ejexSkel = glm::normalize(glm::cross(ejeySkel,
+			ejezSkel)); //producto cruz para hacer x perpendicular
+
+		modelMatrixSkeleton[0] = glm::vec4(ejexSkel, 0.0f); //nuevos ejes
+		modelMatrixSkeleton[1] = glm::vec4(ejeySkel, 0.0f);
+		modelMatrixSkeleton[2] = glm::vec4(ejezSkel, 0.0f);
+
+		glm::mat4 modelMatrixSkeletonBody = glm::mat4(modelMatrixSkeleton);
+		modelMatrixSkeletonBody = glm::scale(modelMatrixSkeletonBody,
+			glm::vec3(0.021, 0.021, 0.021));
+		//skeletonModelAnimate.setAnimationIndex(0);
+		skeletonModelAnimate.render(modelMatrixSkeletonBody);
+		skeletonModelAnimate.setAnimationIndex(0);
 
 		/*******************************************
 		 * Skybox
