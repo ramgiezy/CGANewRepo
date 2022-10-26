@@ -86,6 +86,9 @@ Model mayowModelAnimate;
 //skeleton
 Model skeletonModelAnimate;
 
+//guard (Mixamo)
+//Model guardModelAnimate;
+
 // Terrain model instance
 Terrain terrain(-1, -1, 200, 15, "../Textures/heightMapP4.png");
 
@@ -120,6 +123,7 @@ glm::mat4 modelMatrixAircraft = glm::mat4(1.0);
 glm::mat4 modelMatrixDart = glm::mat4(1.0f);
 glm::mat4 modelMatrixMayow = glm::mat4(1.0f);
 glm::mat4 modelMatrixSkeleton = glm::mat4(1.0f);
+//glm::mat4 modelMatrixGuard = glm::mat4(1.0f);
 
 float rotDartHead = 0.0, rotDartLeftArm = 0.0, rotDartLeftHand = 0.0, rotDartRightArm = 0.0, rotDartRightHand = 0.0, rotDartLeftLeg = 0.0, rotDartRightLeg = 0.0;
 int modelSelected = 0;
@@ -287,6 +291,10 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	//skeleton
 	skeletonModelAnimate.loadModel("../models/own/skeletonAnim.fbx");
 	skeletonModelAnimate.setShader(&shaderMulLighting);
+
+	//guard
+	//guardModelAnimate.loadModel("../models/own/Fall Flat (1).fbx");
+	//guardModelAnimate.setShader(&shaderMulLighting);
 
 	camera->setPosition(glm::vec3(0.0, 3.0, 4.0));
 
@@ -683,6 +691,7 @@ void destroy() {
 	// Custom objects animate
 	mayowModelAnimate.destroy();
 	skeletonModelAnimate.destroy();
+	//guardModelAnimate.destroy();
 
 	// Textures Delete
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -892,6 +901,9 @@ void applicationLoop() {
 
 	modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(13.0f, 0.05f, -5.0f));
 	modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+
+	//modelMatrixGuard = glm::translate(modelMatrixGuard, glm::vec3(13.0f, 0.05f, -10.0f));
+	//modelMatrixGuard = glm::rotate(modelMatrixGuard, glm::radians(-90.0f), glm::vec3(0, 1, 0));
 
 	// Variables to interpolation key frames
 	fileName = "../animaciones/animation_dart_joints.txt";
@@ -1130,6 +1142,13 @@ void applicationLoop() {
 		//skeletonModelAnimate.setAnimationIndex(0);
 		skeletonModelAnimate.render(modelMatrixSkeletonBody);
 		skeletonModelAnimate.setAnimationIndex(0);
+
+		//Guard
+		/*modelMatrixGuard[3][1] = terrain.getHeightTerrain(modelMatrixGuard[3][0], modelMatrixGuard[3][2]);
+		glm::mat4 modelMatrixGuardBody = glm::mat4(modelMatrixGuard);
+		modelMatrixGuardBody = glm::scale(modelMatrixGuardBody, glm::vec3(0.021, 0.021, 0.021));
+		guardModelAnimate.setAnimationIndex(0);
+		guardModelAnimate.render(modelMatrixGuardBody); */
 
 		/*******************************************
 		 * Skybox
