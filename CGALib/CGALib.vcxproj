@@ -73,6 +73,10 @@
     <None Include="..\Shaders\particlesFire.vs" />
     <None Include="..\Shaders\particlesFountain.fs" />
     <None Include="..\Shaders\particlesFountain.vs" />
+    <None Include="..\Shaders\particlesLluvia.fs" />
+    <None Include="..\Shaders\particlesLluvia.vs" />
+    <None Include="..\Shaders\particlesSmoke.fs" />
+    <None Include="..\Shaders\particlesSmoke.vs" />
     <None Include="..\Shaders\shadow_mapping_depth.fs" />
     <None Include="..\Shaders\shadow_mapping_depth.vs" />
     <None Include="..\Shaders\skyBox.fs" />
@@ -84,6 +88,7 @@
     <None Include="..\Shaders\terrain_fog.vs" />
     <None Include="..\Shaders\terrain_shadow.fs" />
     <None Include="..\Shaders\terrain_shadow.vs" />
+    <None Include="..\Shaders\texturizado.fs" />
     <None Include="..\Shaders\texturizado.vs" />
     <None Include="..\Shaders\texturizado_depth_view.fs" />
   </ItemGroup>

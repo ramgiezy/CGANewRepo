@@ -49,6 +49,9 @@
 // OpenAL include
 #include <AL/alut.h>
 
+//Shadowbox include
+#include "Headers/ShadowBox.h"
+
 #define ARRAY_SIZE_IN_ELEMENTS(a) (sizeof(a)/sizeof(a[0]))
 
 int screenWidth;
@@ -73,6 +76,11 @@ Shader shaderParticlesFire;
 Shader shaderViewDepth;
 //Shader para dibujar el buffer de profunidad
 Shader shaderDepth;
+//Shader para dibujar una textura
+Shader shaderTextura;
+
+//Shadow box object
+ShadowBox * shadowBox;
 
 std::shared_ptr<Camera> camera(new ThirdPersonCamera());
 float distanceFromTarget = 7.0;
@@ -82,6 +90,7 @@ Box boxCollider;
 Sphere sphereCollider(10, 10);
 Box boxViewDepth;
 Box boxLightViewBox;
+Box boxIntro;
 
 // Models complex instances
 Model modelRock;
@@ -123,6 +132,9 @@ GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textur
 GLuint textureTerrainBackgroundID, textureTerrainRID, textureTerrainGID, textureTerrainBID, textureTerrainBlendMapID;
 GLuint textureParticleFountainID, textureParticleFireID, texId;
 GLuint skyboxTextureID;
+GLuint texturaActivaID;
+
+bool iniciaPartida = false, presionaOpcion = false;
 
 GLenum types[6] = {
 GL_TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -239,8 +251,8 @@ GLuint depthMap, depthMapFBO;
  */
 
 // OpenAL Defines
-#define NUM_BUFFERS 3
-#define NUM_SOURCES 3
+#define NUM_BUFFERS 4
+#define NUM_SOURCES 4
 #define NUM_ENVIRONMENTS 1
 // Listener
 ALfloat listenerPos[] = { 0.0, 0.0, 4.0 };
@@ -255,6 +267,9 @@ ALfloat source1Vel[] = { 0.0, 0.0, 0.0 };
 // Source 2
 ALfloat source2Pos[] = { 2.0, 0.0, 0.0 };
 ALfloat source2Vel[] = { 0.0, 0.0, 0.0 };
+// Source 3
+ALfloat source3Pos[] = { 2.0, 0.0, 0.0 };
+ALfloat source3Vel[] = { 0.0, 0.0, 0.0 };
 // Buffers
 ALuint buffer[NUM_BUFFERS];
 ALuint source[NUM_SOURCES];
@@ -265,7 +280,7 @@ ALenum format;
 ALvoid *data;
 int ch;
 ALboolean loop;
-std::vector<bool> sourcesPlay = {true, true, true};
+std::vector<bool> sourcesPlay = {true, true, true, true};
 
 // Se definen todos las funciones.
 void reshapeCallback(GLFWwindow *Window, int widthRes, int heightRes);
@@ -497,6 +512,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shaderParticlesFire.initialize("../Shaders/particlesFire.vs", "../Shaders/particlesFire.fs", {"Position", "Velocity", "Age"});
 	shaderViewDepth.initialize("../Shaders/texturizado.vs", "../Shaders/texturizado_depth_view.fs");
 	shaderDepth.initialize("../Shaders/shadow_mapping_depth.vs", "../Shaders/shadow_mapping_depth.fs");
+	shaderTextura.initialize("../Shaders/texturizado.vs", "../Shaders/texturizado.fs");
 
 	// Inicializacion de los objetos.
 	skyboxSphere.init();
@@ -510,6 +526,10 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	sphereCollider.init();
 	sphereCollider.setShader(&shader);
 	sphereCollider.setColor(glm::vec4(1.0, 1.0, 1.0, 1.0));
+
+	boxIntro.init();
+	boxIntro.setShader(&shaderTextura);
+	boxIntro.setScale(glm::vec3(2.0f, 2.0f, 1.0f));
 
 	boxViewDepth.init();
 	boxViewDepth.setShader(&shaderViewDepth);
@@ -1073,6 +1093,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	buffer[0] = alutCreateBufferFromFile("../sounds/fountain.wav");
 	buffer[1] = alutCreateBufferFromFile("../sounds/fire.wav");
 	buffer[2] = alutCreateBufferFromFile("../sounds/darth_vader.wav");
+	buffer[3] = alutCreateBufferFromFile("../sounds/sonidoCarro.wav");
 	int errorAlut = alutGetError();
 	if (errorAlut != ALUT_ERROR_NO_ERROR){
 		printf("- Error open files with alut %d !!\n", errorAlut);
@@ -1113,6 +1134,14 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	alSourcei(source[2], AL_BUFFER, buffer[2]);
 	alSourcei(source[2], AL_LOOPING, AL_TRUE);
 	alSourcef(source[2], AL_MAX_DISTANCE, 500);
+
+	alSourcef(source[3], AL_PITCH, 1.0f);
+	alSourcef(source[3], AL_GAIN, 0.3f);
+	alSourcefv(source[3], AL_POSITION, source3Pos);
+	alSourcefv(source[3], AL_VELOCITY, source3Vel);
+	alSourcei(source[3], AL_BUFFER, buffer[3]);
+	alSourcei(source[3], AL_LOOPING, AL_FALSE);
+	alSourcef(source[3], AL_MAX_DISTANCE, 500);
 }
 
 void destroy() {
@@ -1257,6 +1286,24 @@ bool processInput(bool continueApplication) {
 		return false;
 	}
 
+	if (!iniciaPartida) {
+		bool statusEnter = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+		if (texturaActivaID == textureCespedID && statusEnter) {
+			iniciaPartida = true;
+		}
+		if (!presionaOpcion && glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+			presionaOpcion = true;
+			if (texturaActivaID == textureCespedID)
+				texturaActivaID = textureWallID;
+			else if (texturaActivaID == textureWallID)
+				texturaActivaID = textureCespedID;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
+		{
+			presionaOpcion = false;
+		}
+	}
+
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 		camera->mouseMoveCamera(offsetX, 0.0, deltaTime);
 	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
@@ -1373,6 +1420,7 @@ bool processInput(bool continueApplication) {
 		isJump = true;
 		startTimeJump = currTime;
 		tmv = 0;
+		sourcesPlay[3] = true;
 	}
 
 	glfwPollEvents();
@@ -1419,6 +1467,8 @@ void applicationLoop() {
 	lastTimeParticlesAnimationFire = lastTime;
 
 	glm::vec3 lightPos = glm::vec3(10.0, 10.0, 0.0);
+	shadowBox = new ShadowBox(-lightPos, camera.get(), 15.0f, 0.1f, 45.0f);
+	texturaActivaID = textureCespedID;
 
 	while (psi) {
 		currTime = TimeManager::Instance().GetTime();
@@ -1463,11 +1513,16 @@ void applicationLoop() {
 		view = camera->getViewMatrix();
 
 		// Matriz de proyección del shadow mapping
-		glm::mat4 lightProjection, lightView;
-		glm::mat4 lightSpaceMatrix;
-		float near_plane = 0.1f, far_plane = 20.0f;
-		lightProjection = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, near_plane, far_plane);
-		lightView = glm::lookAt(lightPos, glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
+		glm::mat4 lightProjection = glm::mat4(1.0f), lightView = glm::mat4(1.0f);
+		glm::mat4 lightSpaceMatrix;                      //float near_plane = 0.1f, far_plane = 20.0f;
+		shadowBox->update(screenWidth, screenHeight);
+		glm::vec3 boxPosition = shadowBox->getCenter();
+		lightView = glm::lookAt(boxPosition, boxPosition + glm::normalize(-lightPos), 
+			glm::vec3(0.0, 1.0, 0.0));
+		lightProjection[0][0] = 2.0 / shadowBox->getWidth();
+		lightProjection[1][1] = 2.0 / shadowBox->getHeight();
+		lightProjection[2][2] = -2.0 / shadowBox->getLength();
+		lightProjection[3][3] = 1.0f;
 		lightSpaceMatrix = lightProjection * lightView;
 		shaderDepth.setMatrix4("lightSpaceMatrix", 1, false, glm::value_ptr(lightSpaceMatrix));
 
@@ -1604,6 +1659,18 @@ void applicationLoop() {
 			shaderTerrain.setFloat("pointLights[" + std::to_string(lamp1Position.size() + i) + "].constant", 1.0);
 			shaderTerrain.setFloat("pointLights[" + std::to_string(lamp1Position.size() + i) + "].linear", 0.09);
 			shaderTerrain.setFloat("pointLights[" + std::to_string(lamp1Position.size() + i) + "].quadratic", 0.02);
+		}
+
+		if (!iniciaPartida) {
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glViewport(0, 0, screenWidth, screenHeight);
+			shaderTextura.setMatrix4("view", 1, false, glm::value_ptr(glm::mat4(1.0f)));
+			shaderTextura.setMatrix4("projection", 1, false, glm::value_ptr(glm::mat4(1.0f)));
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texturaActivaID);
+			boxIntro.render();
+			glfwSwapBuffers(window);
+			continue;
 		}
 
 		/*******************************************
@@ -1994,7 +2061,12 @@ void applicationLoop() {
 		source2Pos[2] = modelMatrixDart[3].z;
 		alSourcefv(source[2], AL_POSITION, source2Pos);
 
-		// Listener for the Thris person camera
+		source3Pos[0] = modelMatrixLambo[3].x;
+		source3Pos[1] = modelMatrixLambo[3].y;
+		source3Pos[2] = modelMatrixLambo[3].z;
+		alSourcefv(source[3], AL_POSITION, source3Pos);
+
+		// Listener for the Third person camera
 		listenerPos[0] = modelMatrixMayow[3].x;
 		listenerPos[1] = modelMatrixMayow[3].y;
 		listenerPos[2] = modelMatrixMayow[3].z;

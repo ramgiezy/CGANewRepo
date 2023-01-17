@@ -63,7 +63,9 @@ Shader shaderTerrain;
 //Shader para las particulas de fountain
 Shader shaderParticlesFountain;
 //Shader para las particulas de fuego
-//Shader shaderParticlesFire;
+Shader shaderParticlesFire;
+//Shader para las particulas de smoke
+Shader shaderParticlesSmoke;
 
 std::shared_ptr<Camera> camera(new ThirdPersonCamera());
 float distanceFromTarget = 7.0;
@@ -110,7 +112,7 @@ Terrain terrain(-1, -1, 200, 8, "../Textures/heightmap.png");
 
 GLuint textureCespedID, textureWallID, textureWindowID, textureHighwayID, textureLandingPadID;
 GLuint textureTerrainBackgroundID, textureTerrainRID, textureTerrainGID, textureTerrainBID, textureTerrainBlendMapID;
-GLuint textureParticleFountainID, textureParticleFireID, texId;
+GLuint textureParticleFountainID, textureParticleFireID, textureParticleSmokeID, texId;
 GLuint skyboxTextureID;
 
 GLenum types[6] = {
@@ -188,6 +190,7 @@ std::map<std::string, glm::vec3> blendingUnsorted = {
 		{"heli", glm::vec3(5.0, 10.0, -5.0)},
 		{"fountain", glm::vec3(5.0, 0.0, -40.0)},
 		//{"fire", glm::vec3(0.0, 0.0, 7.0)}
+		{"smoke", glm::vec3(0.0, 0.0, 0.0)}
 };
 
 double deltaTime;
@@ -206,7 +209,7 @@ GLuint nParticles = 8000;
 double currTimeParticlesAnimation, lastTimeParticlesAnimation;
 
 // Definition for the particle system fire
-/*GLuint initVelFire, startTimeFire;
+GLuint initVelFire, startTimeFire;
 GLuint VAOParticlesFire;
 GLuint nParticlesFire = 2000;
 GLuint posBuf[2], velBuf[2], age[2];
@@ -214,7 +217,7 @@ GLuint particleArray[2];
 GLuint feedback[2];
 GLuint drawBuf = 1;
 float particleSize = 0.5, particleLifetime = 3.0;
-double currTimeParticlesAnimationFire, lastTimeParticlesAnimationFire;*/
+double currTimeParticlesAnimationFire, lastTimeParticlesAnimationFire;
 
 // Colliders
 std::map<std::string, std::tuple<AbstractModel::OBB, glm::mat4, glm::mat4> > collidersOBB;
@@ -295,7 +298,7 @@ void initParticleBuffers() {
 	glBindVertexArray(0);
 }
 
-/*void initParticleBuffersFire() {
+void initParticleBuffersFire() {
 	// Generate the buffers
 	glGenBuffers(2, posBuf);    // position buffers
 	glGenBuffers(2, velBuf);    // velocity buffers
@@ -382,7 +385,7 @@ void initParticleBuffers() {
 	glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 2, age[1]);
 
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, 0);
-}*/
+}
 
 // Implementacion de todas las funciones.
 void init(int width, int height, std::string strTitle, bool bFullScreen) {
@@ -444,7 +447,9 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shaderMulLighting.initialize("../Shaders/iluminacion_textura_animation_fog.vs", "../Shaders/multipleLights_fog.fs");
 	shaderTerrain.initialize("../Shaders/terrain_fog.vs", "../Shaders/terrain_fog.fs");
 	shaderParticlesFountain.initialize("../Shaders/particlesFountain.vs", "../Shaders/particlesFountain.fs");
-	//shaderParticlesFire.initialize("../Shaders/particlesFire.vs", "../Shaders/particlesFire.fs", {"Position", "Velocity", "Age"});
+	shaderParticlesFire.initialize("../Shaders/particlesFire.vs", "../Shaders/particlesFire.fs", {"Position", "Velocity", "Age"});
+	shaderParticlesSmoke.initialize("../Shaders/particlesLluvia.vs", 
+		"../Shaders/particlesLluvia.fs", { "Position", "Velocity", "Age" });
 
 	// Inicializacion de los objetos.
 	skyboxSphere.init();
@@ -903,7 +908,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 		std::cout << "Failed to load texture" << std::endl;
 	textureParticlesFountain.freeImage(bitmap);
 
-	/*Texture textureParticleFire("../Textures/fire.png");
+	Texture textureParticleFire("../Textures/fire.png");
 	bitmap = textureParticleFire.loadImage();
 	data = textureParticleFire.convertToData(bitmap, imageWidth, imageHeight);
 	glGenTextures(1, &textureParticleFireID);
@@ -921,9 +926,29 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	}
 	else
 		std::cout << "Failed to load texture" << std::endl;
-	textureParticleFire.freeImage(bitmap);*/
+	textureParticleFire.freeImage(bitmap);
 
-	/*std::uniform_real_distribution<float> distr01 = std::uniform_real_distribution<float>(0.0f, 1.0f);
+	Texture textureParticleSmoke("../Textures/smoke.png");
+	bitmap = textureParticleSmoke.loadImage();
+	data = textureParticleSmoke.convertToData(bitmap, imageWidth, imageHeight);
+	glGenTextures(1, &textureParticleSmokeID);
+	glBindTexture(GL_TEXTURE_2D, textureParticleSmokeID);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);// set texture wrapping to GL_REPEAT (default wrapping method)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0,
+			GL_BGRA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+		std::cout << "Failed to load texture" << std::endl;
+	textureParticleSmoke.freeImage(bitmap);
+
+	std::uniform_real_distribution<float> distr01 = std::uniform_real_distribution<float>(0.0f, 1.0f);
 	std::mt19937 generator;
 	std::random_device rd;
 	generator.seed(rd());
@@ -945,8 +970,16 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	shaderParticlesFire.setInt("RandomTex", 1);
 	shaderParticlesFire.setFloat("ParticleLifetime", particleLifetime);
 	shaderParticlesFire.setFloat("ParticleSize", particleSize);
-	shaderParticlesFire.setVectorFloat3("Accel", glm::value_ptr(glm::vec3(0.0f,0.1f,0.0f)));
+	shaderParticlesFire.setVectorFloat3("Accel", glm::value_ptr(glm::vec3(0.0f,0.1f,0.1f)));
 	shaderParticlesFire.setVectorFloat3("Emitter", glm::value_ptr(glm::vec3(0.0f)));
+
+	shaderParticlesSmoke.setInt("Pass", 1);
+	shaderParticlesSmoke.setInt("ParticleTex", 0);
+	shaderParticlesSmoke.setInt("RandomTex", 1);
+	shaderParticlesSmoke.setFloat("ParticleLifetime", particleLifetime);
+	shaderParticlesSmoke.setFloat("ParticleSize", particleSize);
+	shaderParticlesSmoke.setVectorFloat3("Accel", glm::value_ptr(glm::vec3(0.0f, -4.3f, 0.0f)));
+	shaderParticlesSmoke.setVectorFloat3("Emitter", glm::value_ptr(glm::vec3(0.0f, 10.0f, 0.0f)));
 
 	glm::mat3 basis;
 	glm::vec3 u, v, n;
@@ -959,7 +992,9 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	basis[0] = glm::normalize(u);
 	basis[1] = glm::normalize(v);
 	basis[2] = glm::normalize(n);
-	shaderParticlesFire.setMatrix3("EmitterBasis", 1, false, glm::value_ptr(basis));*/
+	shaderParticlesFire.setMatrix3("EmitterBasis", 1, false, glm::value_ptr(basis));
+
+	shaderParticlesSmoke.setMatrix3("EmitterBasis", 1, false, glm::value_ptr(basis));
 
 	/*******************************************
 	 * Inicializacion de los buffers de la fuente
@@ -969,7 +1004,7 @@ void init(int width, int height, std::string strTitle, bool bFullScreen) {
 	/*******************************************
 	 * Inicializacion de los buffers del fuego
 	 *******************************************/
-	//initParticleBuffersFire();
+	initParticleBuffersFire();
 }
 
 void destroy() {
@@ -984,7 +1019,8 @@ void destroy() {
 	shaderSkybox.destroy();
 	shaderTerrain.destroy();
 	shaderParticlesFountain.destroy();
-	//shaderParticlesFire.destroy();
+	shaderParticlesFire.destroy();
+	shaderParticlesSmoke.destroy();
 
 	// Basic objects Delete
 	skyboxSphere.destroy();
@@ -1038,6 +1074,7 @@ void destroy() {
 	glDeleteTextures(1, &textureTerrainBlendMapID);
 	glDeleteTextures(1, &textureParticleFountainID);
 	glDeleteTextures(1, &textureParticleFireID);
+	glDeleteTextures(1, &textureParticleSmokeID);
 
 	// Cube Maps Delete
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
@@ -1051,14 +1088,14 @@ void destroy() {
 	glDeleteVertexArrays(1, &VAOParticles);
 
 	// Remove the buffer of the fire particles
-	/*glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glDeleteBuffers(2, posBuf);
 	glDeleteBuffers(2, velBuf);
 	glDeleteBuffers(2, age);
 	glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, 0);
 	glDeleteTransformFeedbacks(2, feedback);
 	glBindVertexArray(0);
-	glDeleteVertexArrays(1, &VAOParticlesFire);*/
+	glDeleteVertexArrays(1, &VAOParticlesFire);
 }
 
 void reshapeCallback(GLFWwindow *Window, int widthRes, int heightRes) {
@@ -1210,16 +1247,16 @@ bool processInput(bool continueApplication) {
 		modelMatrixDart = glm::translate(modelMatrixDart, glm::vec3(0.02, 0.0, 0.0));
 
 	if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
-		modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(1.0f), glm::vec3(0, 1, 0));
+		modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(2.0f), glm::vec3(0, 1, 0));
 		animationIndex = 0;
 	}else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
-		modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(-1.0f), glm::vec3(0, 1, 0));
+		modelMatrixMayow = glm::rotate(modelMatrixMayow, glm::radians(-2.0f), glm::vec3(0, 1, 0));
 		animationIndex = 0;
 	}if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0, 0, 0.02));
+		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0, 0, 0.12));
 		animationIndex = 0;
 	}else if (modelSelected == 2 && glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0, 0, -0.02));
+		modelMatrixMayow = glm::translate(modelMatrixMayow, glm::vec3(0, 0, -0.12));
 		animationIndex = 0;
 	}
 
@@ -1270,8 +1307,8 @@ void applicationLoop() {
 	currTimeParticlesAnimation = lastTime;
 	lastTimeParticlesAnimation = lastTime;
 
-	/*currTimeParticlesAnimationFire = lastTime;
-	lastTimeParticlesAnimationFire = lastTime;*/
+	currTimeParticlesAnimationFire = lastTime;
+	lastTimeParticlesAnimationFire = lastTime;
 
 	while (psi) {
 		currTime = TimeManager::Instance().GetTime();
@@ -1342,8 +1379,14 @@ void applicationLoop() {
 		shaderParticlesFountain.setMatrix4("view", 1, false,
 				glm::value_ptr(view));
 		// Settea la matriz de vista y projection al shader para el fuego
-		/*shaderParticlesFire.setMatrix4("projection", 1, false, glm::value_ptr(projection));
-		shaderParticlesFire.setMatrix4("view", 1, false, glm::value_ptr(view));*/
+		shaderParticlesFire.setMatrix4("projection", 1, false, glm::value_ptr(projection));
+		shaderParticlesFire.setMatrix4("view", 1, false, glm::value_ptr(view));
+		shaderParticlesFire.setVectorFloat3("colorFuego", glm::value_ptr(glm::vec3(0.0f, 0.0f, 1.0f)));
+
+		// Settea la matriz de vista y projection al shader para el humo
+		shaderParticlesSmoke.setMatrix4("projection", 1, false, glm::value_ptr(projection));
+		shaderParticlesSmoke.setMatrix4("view", 1, false, glm::value_ptr(view));
+		shaderParticlesSmoke.setVectorFloat3("colorFuego", glm::value_ptr(glm::vec3(0.0f, 0.0f, 1.0f)));
 
 		/*******************************************
 		 * Propiedades de neblina
@@ -1703,7 +1746,7 @@ void applicationLoop() {
 				/**********
 				 * Init Render particles systems
 				 */
-				/*lastTimeParticlesAnimationFire = currTimeParticlesAnimationFire;
+				lastTimeParticlesAnimationFire = currTimeParticlesAnimationFire;
 				currTimeParticlesAnimationFire = TimeManager::Instance().GetTime();
 
 				shaderParticlesFire.setInt("Pass", 1);
@@ -1721,9 +1764,9 @@ void applicationLoop() {
 				glVertexAttribDivisor(2,0);
 				glDrawArrays(GL_POINTS, 0, nParticlesFire);
 				glEndTransformFeedback();
-				glDisable(GL_RASTERIZER_DISCARD);*/
+				glDisable(GL_RASTERIZER_DISCARD);
 
-				/*shaderParticlesFire.setInt("Pass", 2);
+				shaderParticlesFire.setInt("Pass", 2);
 				glm::mat4 modelFireParticles = glm::mat4(1.0);
 				modelFireParticles = glm::translate(modelFireParticles, it->second.second);
 				modelFireParticles[3][1] = terrain.getHeightTerrain(modelFireParticles[3][0], modelFireParticles[3][2]);
@@ -1741,11 +1784,62 @@ void applicationLoop() {
 				glBindVertexArray(0);
 				glDepthMask(GL_TRUE);
 				drawBuf = 1 - drawBuf;
-				shaderParticlesFire.turnOff();*/
+				shaderParticlesFire.turnOff();
 
 				/**********
 				 * End Render particles systems
 				 */
+			}
+			else if (it->second.first.compare("smoke") == 0) {
+			/**********
+			 * Init Render particles systems
+			 */
+			 lastTimeParticlesAnimationFire = currTimeParticlesAnimationFire;
+			 currTimeParticlesAnimationFire = TimeManager::Instance().GetTime();
+
+			 shaderParticlesSmoke.setInt("Pass", 1);
+			 shaderParticlesSmoke.setFloat("Time", currTimeParticlesAnimationFire);
+			 shaderParticlesSmoke.setFloat("DeltaT", currTimeParticlesAnimationFire - lastTimeParticlesAnimationFire);
+
+			 glActiveTexture(GL_TEXTURE1);
+			 glBindTexture(GL_TEXTURE_1D, texId);
+			 glEnable(GL_RASTERIZER_DISCARD);
+			 glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, feedback[drawBuf]);
+			 glBeginTransformFeedback(GL_POINTS);
+			 glBindVertexArray(particleArray[1 - drawBuf]);
+			 glVertexAttribDivisor(0, 0);
+			 glVertexAttribDivisor(1, 0);
+			 glVertexAttribDivisor(2, 0);
+			 glDrawArrays(GL_POINTS, 0, nParticlesFire);
+			 glEndTransformFeedback();
+			 glDisable(GL_RASTERIZER_DISCARD);
+
+			 shaderParticlesSmoke.setInt("Pass", 2);
+			 glm::mat4 modelFireParticles = glm::mat4(1.0);
+			 modelFireParticles = glm::translate(modelFireParticles, it->second.second);
+			 modelFireParticles[3][1] = terrain.getHeightTerrain(modelFireParticles[3][0], modelFireParticles[3][2]);
+			 glm::vec3 positionEmmiter = glm::vec3(modelMatrixMayow[3]);
+			 positionEmmiter.y = 10.0f;
+			 shaderParticlesSmoke.setVectorFloat3("Emitter", glm::value_ptr(positionEmmiter));
+			 shaderParticlesSmoke.setMatrix4("model", 1, false, glm::value_ptr(modelFireParticles));
+
+			 shaderParticlesSmoke.turnOn();
+			 glActiveTexture(GL_TEXTURE0);
+			 glBindTexture(GL_TEXTURE_2D, textureParticleFountainID);
+			 glDepthMask(GL_FALSE);
+			 glBindVertexArray(particleArray[drawBuf]);
+			 glVertexAttribDivisor(0, 1);
+			 glVertexAttribDivisor(1, 1);
+			 glVertexAttribDivisor(2, 1);
+			 glDrawArraysInstanced(GL_TRIANGLES, 0, 6, nParticlesFire);
+			 glBindVertexArray(0);
+			 glDepthMask(GL_TRUE);
+			 drawBuf = 1 - drawBuf;
+			 shaderParticlesSmoke.turnOff();
+
+			 /**********
+			  * End Render particles systems
+			  */
 			}
 
 		}
